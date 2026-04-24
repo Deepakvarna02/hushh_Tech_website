@@ -11,6 +11,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+function applyCorsHeaders(response) {
+  for (const [header, value] of Object.entries(corsHeaders)) {
+    response.setHeader(header, value);
+  }
+}
+
 function createSupabaseAdminClient() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -52,6 +58,8 @@ async function resolvePublicProfileOwner(slug) {
 }
 
 export default async function handler(req, res) {
+  applyCorsHeaders(res);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).json({ ok: true });
@@ -174,6 +182,8 @@ export default async function handler(req, res) {
           </p>
         </div>
       `;
+    } else {
+      return res.status(400).json({ error: 'Unsupported notification type' });
     }
 
     // Send email
@@ -187,9 +197,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, emailSent: true });
   } catch (error) {
     console.error('Email error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to send email';
+    const details = error instanceof Error ? error.toString() : String(error);
     return res.status(500).json({ 
-      error: error.message || 'Failed to send email',
-      details: error.toString()
+      error: message,
+      details,
     });
   }
 }

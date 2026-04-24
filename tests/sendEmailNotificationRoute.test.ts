@@ -1,0 +1,175 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  sendMail,
+  createTransport,
+  maybeSingle,
+  eq,
+  select,
+  from,
+  createClient,
+} = vi.hoisted(() => {
+  const sendMailMock = vi.fn();
+  const maybeSingleMock = vi.fn();
+  const eqMock = vi.fn();
+  const selectMock = vi.fn();
+  const fromMock = vi.fn();
+  const createClientMock = vi.fn();
+  const createTransportMock = vi.fn(() => ({
+    sendMail: sendMailMock,
+  }));
+
+  eqMock.mockImplementation(() => ({ eq: eqMock, maybeSingle: maybeSingleMock }));
+  selectMock.mockImplementation(() => ({ eq: eqMock }));
+  fromMock.mockImplementation(() => ({ select: selectMock }));
+  createClientMock.mockImplementation(() => ({ from: fromMock }));
+
+  return {
+    sendMail: sendMailMock,
+    createTransport: createTransportMock,
+    maybeSingle: maybeSingleMock,
+    eq: eqMock,
+    select: selectMock,
+    from: fromMock,
+    createClient: createClientMock,
+  };
+});
+
+vi.mock("nodemailer", () => ({
+  default: {
+    createTransport,
+  },
+}));
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient,
+}));
+
+import sendEmailNotificationHandler from "../api/send-email-notification.js";
+
+const createResponse = () => {
+  const headers = new Map();
+  let statusCode = 200;
+  let body;
+
+  const response = {
+    headers,
+    get statusCode() {
+      return statusCode;
+    },
+    get body() {
+      return body;
+    },
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(payload) {
+      body = payload;
+      return this;
+    },
+    setHeader(name, value) {
+      headers.set(name, value);
+      return this;
+    },
+  };
+
+  return response;
+};
+
+describe("send email notification route", () => {
+  beforeEach(() => {
+    process.env.GMAIL_USER = "notifications@hushh.ai";
+    process.env.GMAIL_APP_PASSWORD = "app-password";
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    maybeSingle.mockResolvedValue({
+      data: {
+        email: "owner@hushh.ai",
+        name: "Owner Profile",
+      },
+      error: null,
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    delete process.env.GMAIL_USER;
+    delete process.env.GMAIL_APP_PASSWORD;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    vi.clearAllMocks();
+  });
+
+  it("returns CORS headers for preflight requests", async () => {
+    const res = createResponse();
+
+    await sendEmailNotificationHandler({ method: "OPTIONS", body: {} }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.headers.get("Access-Control-Allow-Methods")).toBe("POST, OPTIONS");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type");
+  });
+
+  it("returns CORS headers for rejected non-POST requests", async () => {
+    const res = createResponse();
+
+    await sendEmailNotificationHandler({ method: "GET", body: {} }, res);
+
+    expect(res.statusCode).toBe(405);
+    expect(res.body).toEqual({ error: "Method not allowed" });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
+
+  it("rejects unsupported notification types before sending mail", async () => {
+    const res = createResponse();
+
+    await sendEmailNotificationHandler(
+      {
+        method: "POST",
+        body: {
+          type: "unknown",
+          slug: "owner-profile",
+          profileOwnerEmail: "owner@hushh.ai",
+        },
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Unsupported notification type" });
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it("sends a profile view notification with the expected email metadata", async () => {
+    sendMail.mockResolvedValue({ messageId: "msg-123" });
+    const res = createResponse();
+
+    await sendEmailNotificationHandler(
+      {
+        method: "POST",
+        body: {
+          type: "profile_view",
+          slug: "owner-profile",
+          profileOwnerEmail: "owner@hushh.ai",
+          profileName: "Owner Profile",
+        },
+      },
+      res
+    );
+
+    expect(createTransport).toHaveBeenCalledTimes(1);
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "owner@hushh.ai",
+        subject: expect.stringContaining("Owner Profile"),
+        html: expect.stringContaining("Someone is viewing your profile"),
+      })
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ success: true, emailSent: true });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
+});
