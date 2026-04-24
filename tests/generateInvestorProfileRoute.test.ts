@@ -122,6 +122,25 @@ describe("generate investor profile route", () => {
     });
   });
 
+  it("rejects excessively nested raw JSON strings", () => {
+    let nestedBody = JSON.stringify({
+      input: {
+        name: "Deepak",
+      },
+      context: {
+        country: "India",
+      },
+    });
+
+    for (let index = 0; index < 11; index += 1) {
+      nestedBody = JSON.stringify(nestedBody);
+    }
+
+    expect(resolveInvestorProfileRequestBody(nestedBody)).toEqual({
+      error: "Payload is nested too deeply",
+    });
+  });
+
   it("returns 400 when parsed payload is missing input or context", async () => {
     const fetchMock = vi.fn();
     global.fetch = fetchMock;

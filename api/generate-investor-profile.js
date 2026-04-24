@@ -99,10 +99,21 @@ const PROFILE_SCHEMA = {
   }
 };
 
+const MAX_REQUEST_PARSE_DEPTH = 10;
+
 export const resolveInvestorProfileRequestBody = (body) => {
   let payload = body;
+  let depth = 0;
 
   while (typeof payload === "string") {
+    if (depth >= MAX_REQUEST_PARSE_DEPTH) {
+      return {
+        error: "Payload is nested too deeply",
+      };
+    }
+
+    depth += 1;
+
     try {
       payload = JSON.parse(payload);
     } catch {
