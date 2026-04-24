@@ -368,4 +368,56 @@ describe("wallet proxy routes", () => {
     expect(res.body).toEqual({ error: "Invalid wallet pass payload" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("fails closed when the wallet proxy receives JSON primitives", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = {
+      method: "POST",
+      body: JSON.stringify(true),
+    };
+    const res = createResponse();
+
+    await walletPassHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Invalid wallet pass payload" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("unwraps nested raw JSON strings without recursion for the Google Wallet proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ saveUrl: "https://pay.google.com/gp/v/save/nested-raw-json" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const nestedBody = JSON.stringify(
+      JSON.stringify({
+        payload: JSON.stringify({ passType: "storeCard", memberId: "nested-raw-json" }),
+      })
+    );
+    const req = {
+      method: "POST",
+      body: nestedBody,
+    };
+    const res = createResponse();
+
+    await googleWalletPassHandler(req, res);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://hushh-wallet.vercel.app/api/passes/google/create",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ passType: "storeCard", memberId: "nested-raw-json" }),
+      })
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      saveUrl: "https://pay.google.com/gp/v/save/nested-raw-json",
+    });
+  });
 });

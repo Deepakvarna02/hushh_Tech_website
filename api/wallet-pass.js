@@ -4,11 +4,21 @@ const UPSTREAM_APPLE_WALLET_ENDPOINT =
 const resolvePayload = (body) => {
   if (!body) return null;
   if (typeof body === "string") {
-    try {
-      return resolvePayload(JSON.parse(body));
-    } catch {
+    let payload = body;
+
+    while (typeof payload === "string") {
+      try {
+        payload = JSON.parse(payload);
+      } catch {
+        return null;
+      }
+    }
+
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
     }
+
+    body = payload;
   }
   if (typeof body.payload === "string") {
     try {
