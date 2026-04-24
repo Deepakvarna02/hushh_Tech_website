@@ -4,9 +4,6 @@ const {
   sendMail,
   createTransport,
   maybeSingle,
-  eq,
-  select,
-  from,
   createClient,
 } = vi.hoisted(() => {
   const sendMailMock = vi.fn();
@@ -28,9 +25,6 @@ const {
     sendMail: sendMailMock,
     createTransport: createTransportMock,
     maybeSingle: maybeSingleMock,
-    eq: eqMock,
-    select: selectMock,
-    from: fromMock,
     createClient: createClientMock,
   };
 });
@@ -171,5 +165,26 @@ describe("send email notification route", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ success: true, emailSent: true });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
+
+  it("returns a generic 500 error without leaking internal details", async () => {
+    sendMail.mockRejectedValue(new Error("smtp handshake failed"));
+    const res = createResponse();
+
+    await sendEmailNotificationHandler(
+      {
+        method: "POST",
+        body: {
+          type: "profile_view",
+          slug: "owner-profile",
+          profileOwnerEmail: "owner@hushh.ai",
+          profileName: "Owner Profile",
+        },
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({ error: "Failed to send email" });
   });
 });

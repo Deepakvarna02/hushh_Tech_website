@@ -197,11 +197,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, emailSent: true });
   } catch (error) {
     console.error('Email error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to send email';
-    const details = error instanceof Error ? error.toString() : String(error);
     return res.status(500).json({ 
-      error: message,
-      details,
+      error: 'Failed to send email',
     });
   }
 }
