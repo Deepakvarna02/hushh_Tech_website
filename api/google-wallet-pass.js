@@ -16,6 +16,13 @@ let upstreamAvailabilityCache = null;
 
 const resolvePayload = (body) => {
   if (!body) return null;
+  if (typeof body === "string") {
+    try {
+      return JSON.parse(body);
+    } catch {
+      return null;
+    }
+  }
   if (typeof body.payload === "string") {
     try {
       return JSON.parse(body.payload);

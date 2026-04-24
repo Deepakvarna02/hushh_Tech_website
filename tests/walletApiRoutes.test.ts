@@ -104,6 +104,36 @@ describe("wallet proxy routes", () => {
     expect(Buffer.isBuffer(res.body)).toBe(true);
   });
 
+  it("accepts raw JSON string bodies for the Apple Wallet proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({
+        "content-type": "application/vnd.apple.pkpass",
+      }),
+      arrayBuffer: async () => new TextEncoder().encode("pkpass").buffer,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = {
+      method: "POST",
+      body: JSON.stringify({ passType: "storeCard", memberId: "raw-json" }),
+    };
+    const res = createResponse();
+
+    await walletPassHandler(req, res);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://hushh-wallet.vercel.app/api/passes/universal/create",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ passType: "storeCard", memberId: "raw-json" }),
+      })
+    );
+    expect(res.statusCode).toBe(200);
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+  });
+
   it("returns Google Wallet save URLs from the same-origin proxy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -131,6 +161,36 @@ describe("wallet proxy routes", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
       saveUrl: "https://pay.google.com/gp/v/save/test",
+    });
+  });
+
+  it("accepts raw JSON string bodies for the Google Wallet proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ saveUrl: "https://pay.google.com/gp/v/save/raw-json" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = {
+      method: "POST",
+      body: JSON.stringify({ passType: "storeCard", memberId: "raw-json" }),
+    };
+    const res = createResponse();
+
+    await googleWalletPassHandler(req, res);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://hushh-wallet.vercel.app/api/passes/google/create",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ passType: "storeCard", memberId: "raw-json" }),
+      })
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      saveUrl: "https://pay.google.com/gp/v/save/raw-json",
     });
   });
 
@@ -209,5 +269,22 @@ describe("wallet proxy routes", () => {
       detail:
         "Google Wallet is temporarily unavailable while we finish the wallet issuer setup.",
     });
+  });
+
+  it("fails closed when the wallet proxy receives malformed JSON strings", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = {
+      method: "POST",
+      body: "{invalid-json}",
+    };
+    const res = createResponse();
+
+    await walletPassHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Invalid wallet pass payload" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
