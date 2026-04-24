@@ -26,7 +26,7 @@ function applyCorsHeaders(request, response) {
 function isOriginAllowed(request) {
   const origin = request.headers?.origin;
   if (!origin) {
-    return true;
+    return false;
   }
 
   return getAllowedOrigins().includes(origin);

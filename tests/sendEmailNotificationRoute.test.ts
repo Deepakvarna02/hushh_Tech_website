@@ -261,4 +261,27 @@ describe("send email notification route", () => {
     expect(sendMail).not.toHaveBeenCalled();
     expect(res.headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
+
+  it("rejects POST requests without an origin header", async () => {
+    const res = createResponse();
+
+    await sendEmailNotificationHandler(
+      {
+        method: "POST",
+        headers: {},
+        body: {
+          type: "profile_view",
+          slug: "owner-profile",
+          profileOwnerEmail: "owner@hushh.ai",
+          profileName: "Owner Profile",
+        },
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toEqual({ error: "Origin not allowed" });
+    expect(sendMail).not.toHaveBeenCalled();
+    expect(res.headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
 });
