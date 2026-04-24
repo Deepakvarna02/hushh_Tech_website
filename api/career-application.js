@@ -13,6 +13,11 @@ const ALLOWED_COLLEGES = new Set(['LPU', 'MIT']);
 
 const sanitizeString = (value) => (typeof value === 'string' ? value.trim() : '');
 const buildErrorWithCause = (message, cause) => new Error(message, { cause });
+const buildBadRequestError = (message, cause) => {
+  const error = buildErrorWithCause(message, cause);
+  error.statusCode = 400;
+  return error;
+};
 
 const parseRequestBody = (body) => {
   if (!body) {
@@ -21,10 +26,14 @@ const parseRequestBody = (body) => {
 
   if (typeof body === 'string') {
     try {
-      return JSON.parse(body);
+      body = JSON.parse(body);
     } catch (parseError) {
-      throw buildErrorWithCause('Invalid JSON payload', parseError);
+      throw buildBadRequestError('Invalid JSON payload', parseError);
     }
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw buildBadRequestError('Invalid request payload');
   }
 
   return body;
@@ -125,8 +134,12 @@ export default async function handler(request, response) {
   } catch (error) {
     console.error('Error processing application:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return response.status(500).json({
-      error: 'Internal server error',
+    const statusCode =
+      typeof error?.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500
+        ? error.statusCode
+        : 500;
+    return response.status(statusCode).json({
+      error: statusCode === 500 ? 'Internal server error' : 'Invalid request',
       message,
     });
   }

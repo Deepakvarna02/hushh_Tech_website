@@ -48,7 +48,7 @@ describe("career application route", () => {
     expect(res.body).toEqual({ error: "Method not allowed" });
   });
 
-  it("returns a clear error for malformed JSON and preserves the parse cause", async () => {
+  it("returns a clear 400 for malformed JSON and preserves the parse cause", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = createResponse();
 
@@ -60,9 +60,9 @@ describe("career application route", () => {
       res
     );
 
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({
-      error: "Internal server error",
+      error: "Invalid request",
       message: "Invalid JSON payload",
     });
     expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -72,6 +72,48 @@ describe("career application route", () => {
         cause: expect.any(SyntaxError),
       })
     );
+  });
+
+  it("rejects primitive JSON bodies before validation", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock;
+    const res = createResponse();
+
+    await careerApplicationHandler(
+      {
+        method: "POST",
+        body: JSON.stringify(true),
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({
+      error: "Invalid request",
+      message: "Invalid request payload",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects array JSON bodies before validation", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock;
+    const res = createResponse();
+
+    await careerApplicationHandler(
+      {
+        method: "POST",
+        body: JSON.stringify([]),
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({
+      error: "Invalid request",
+      message: "Invalid request payload",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fails validation before calling the Apps Script when required fields are missing", async () => {
