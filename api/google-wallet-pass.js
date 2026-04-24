@@ -11,6 +11,7 @@ const GOOGLE_WALLET_SCOPE =
   "https://www.googleapis.com/auth/wallet_object.issuer";
 const GOOGLE_WALLET_UNAVAILABLE_MESSAGE =
   "Google Wallet is temporarily unavailable while we finish the wallet issuer setup.";
+const MAX_UNWRAP_DEPTH = 5;
 
 let upstreamAvailabilityCache = null;
 
@@ -18,8 +19,13 @@ const resolvePayload = (body) => {
   if (!body) return null;
   if (typeof body === "string") {
     let payload = body;
+    let unwrapCount = 0;
 
     while (typeof payload === "string") {
+      if (unwrapCount++ >= MAX_UNWRAP_DEPTH) {
+        return null;
+      }
+
       try {
         payload = JSON.parse(payload);
       } catch {

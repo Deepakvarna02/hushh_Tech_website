@@ -1,12 +1,18 @@
 const UPSTREAM_APPLE_WALLET_ENDPOINT =
   "https://hushh-wallet.vercel.app/api/passes/universal/create";
+const MAX_UNWRAP_DEPTH = 5;
 
 const resolvePayload = (body) => {
   if (!body) return null;
   if (typeof body === "string") {
     let payload = body;
+    let unwrapCount = 0;
 
     while (typeof payload === "string") {
+      if (unwrapCount++ >= MAX_UNWRAP_DEPTH) {
+        return null;
+      }
+
       try {
         payload = JSON.parse(payload);
       } catch {

@@ -420,4 +420,48 @@ describe("wallet proxy routes", () => {
       saveUrl: "https://pay.google.com/gp/v/save/nested-raw-json",
     });
   });
+
+  it("fails closed when Apple wallet payload unwrapping exceeds the maximum depth", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    let nestedBody = JSON.stringify({ passType: "storeCard", memberId: "too-deep" });
+    for (let index = 0; index < 6; index += 1) {
+      nestedBody = JSON.stringify(nestedBody);
+    }
+
+    const req = {
+      method: "POST",
+      body: nestedBody,
+    };
+    const res = createResponse();
+
+    await walletPassHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Invalid wallet pass payload" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when Google wallet payload unwrapping exceeds the maximum depth", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    let nestedBody = JSON.stringify({ passType: "storeCard", memberId: "too-deep" });
+    for (let index = 0; index < 6; index += 1) {
+      nestedBody = JSON.stringify(nestedBody);
+    }
+
+    const req = {
+      method: "POST",
+      body: nestedBody,
+    };
+    const res = createResponse();
+
+    await googleWalletPassHandler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Invalid wallet pass payload" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
