@@ -23,6 +23,15 @@ function applyCorsHeaders(request, response) {
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+function isOriginAllowed(request) {
+  const origin = request.headers?.origin;
+  if (!origin) {
+    return true;
+  }
+
+  return getAllowedOrigins().includes(origin);
+}
+
 function createSupabaseAdminClient() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -65,6 +74,10 @@ async function resolvePublicProfileOwner(slug) {
 
 export default async function handler(req, res) {
   applyCorsHeaders(req, res);
+
+  if (!isOriginAllowed(req)) {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
