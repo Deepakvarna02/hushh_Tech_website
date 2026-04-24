@@ -98,12 +98,16 @@ export function main() {
 
   console.log("Capturing full repo lint report (report-only)...");
   const reportFileDescriptor = fs.openSync(FULL_REPORT_PATH, "w");
-  const result = runChecked("node", getEslintCommandArgs(".", "--format", "json"), {
-    cwd: ROOT_DIR,
-    stdio: ["ignore", reportFileDescriptor, "inherit"],
-    allowFailure: true,
-  });
-  fs.closeSync(reportFileDescriptor);
+  let result;
+  try {
+    result = runChecked("node", getEslintCommandArgs(".", "--format", "json"), {
+      cwd: ROOT_DIR,
+      stdio: ["ignore", reportFileDescriptor, "inherit"],
+      allowFailure: true,
+    });
+  } finally {
+    fs.closeSync(reportFileDescriptor);
+  }
 
   if (result.status !== 0) {
     console.log(`Full repo lint violations captured in ${path.relative(ROOT_DIR, FULL_REPORT_PATH)}`);

@@ -31,5 +31,10 @@ const isDirectExecution =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectExecution) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(error.exitCode ?? 1);
+  }
 }
