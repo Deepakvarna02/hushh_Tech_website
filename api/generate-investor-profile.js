@@ -134,6 +134,9 @@ export const resolveInvestorProfileRequestBody = (body) => {
   };
 };
 
+const isPlainRequestObject = (value) =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -166,6 +169,12 @@ export default async function handler(req, res) {
     // Validate input
     if (!input || !context) {
       return res.status(400).json({ error: 'Missing required fields: input and context' });
+    }
+
+    if (!isPlainRequestObject(input) || !isPlainRequestObject(context)) {
+      return res.status(400).json({
+        error: 'Invalid request payload: input and context must be objects',
+      });
     }
 
     // Get OpenAI API key from environment

@@ -165,6 +165,31 @@ describe("generate investor profile route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("returns 400 when input or context are not objects", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock;
+    const res = createResponse();
+
+    await generateInvestorProfileHandler(
+      {
+        method: "POST",
+        body: JSON.stringify({
+          input: true,
+          context: {
+            country: "India",
+          },
+        }),
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({
+      error: "Invalid request payload: input and context must be objects",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("accepts raw JSON string bodies and returns the generated profile", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
