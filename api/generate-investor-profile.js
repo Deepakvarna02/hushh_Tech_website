@@ -134,8 +134,14 @@ export const resolveInvestorProfileRequestBody = (body) => {
   };
 };
 
-const isPlainRequestObject = (value) =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+const isPlainRequestObject = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
 
 export default async function handler(req, res) {
   // Set CORS headers
