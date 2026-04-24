@@ -99,6 +99,28 @@ const PROFILE_SCHEMA = {
   }
 };
 
+const parseRequestBody = (body) => {
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return {
+        error: "Invalid JSON payload",
+      };
+    }
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {
+      error: "Invalid request payload",
+    };
+  }
+
+  return {
+    body,
+  };
+};
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -121,7 +143,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { input, context } = req.body;
+    const parsedRequest = parseRequestBody(req.body);
+    if (parsedRequest.error) {
+      return res.status(400).json({ error: parsedRequest.error });
+    }
+
+    const { input, context } = parsedRequest.body;
 
     // Validate input
     if (!input || !context) {
