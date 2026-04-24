@@ -99,10 +99,12 @@ const PROFILE_SCHEMA = {
   }
 };
 
-const parseRequestBody = (body) => {
-  if (typeof body === "string") {
+export const resolveInvestorProfileRequestBody = (body) => {
+  let payload = body;
+
+  while (typeof payload === "string") {
     try {
-      body = JSON.parse(body);
+      payload = JSON.parse(payload);
     } catch {
       return {
         error: "Invalid JSON payload",
@@ -110,14 +112,14 @@ const parseRequestBody = (body) => {
     }
   }
 
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       error: "Invalid request payload",
     };
   }
 
   return {
-    body,
+    body: payload,
   };
 };
 
@@ -143,7 +145,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const parsedRequest = parseRequestBody(req.body);
+    const parsedRequest = resolveInvestorProfileRequestBody(req.body);
     if (parsedRequest.error) {
       return res.status(400).json({ error: parsedRequest.error });
     }
