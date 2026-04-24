@@ -73,6 +73,7 @@ const createResponse = () => {
 
 describe("send email notification route", () => {
   beforeEach(() => {
+    process.env.ALLOWED_ORIGINS = "https://hushhtech.com,https://kai.hushh.ai";
     process.env.GMAIL_USER = "notifications@hushh.ai";
     process.env.GMAIL_APP_PASSWORD = "app-password";
     process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -88,6 +89,7 @@ describe("send email notification route", () => {
   });
 
   afterEach(() => {
+    delete process.env.ALLOWED_ORIGINS;
     delete process.env.GMAIL_USER;
     delete process.env.GMAIL_APP_PASSWORD;
     delete process.env.SUPABASE_URL;
@@ -98,11 +100,20 @@ describe("send email notification route", () => {
   it("returns CORS headers for preflight requests", async () => {
     const res = createResponse();
 
-    await sendEmailNotificationHandler({ method: "OPTIONS", body: {} }, res);
+    await sendEmailNotificationHandler(
+      {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://hushhtech.com",
+        },
+        body: {},
+      },
+      res
+    );
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ ok: true });
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://hushhtech.com");
     expect(res.headers.get("Access-Control-Allow-Methods")).toBe("POST, OPTIONS");
     expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type");
   });
@@ -110,11 +121,20 @@ describe("send email notification route", () => {
   it("returns CORS headers for rejected non-POST requests", async () => {
     const res = createResponse();
 
-    await sendEmailNotificationHandler({ method: "GET", body: {} }, res);
+    await sendEmailNotificationHandler(
+      {
+        method: "GET",
+        headers: {
+          origin: "https://kai.hushh.ai",
+        },
+        body: {},
+      },
+      res
+    );
 
     expect(res.statusCode).toBe(405);
     expect(res.body).toEqual({ error: "Method not allowed" });
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://kai.hushh.ai");
   });
 
   it("rejects unsupported notification types before sending mail", async () => {
@@ -123,6 +143,9 @@ describe("send email notification route", () => {
     await sendEmailNotificationHandler(
       {
         method: "POST",
+        headers: {
+          origin: "https://hushhtech.com",
+        },
         body: {
           type: "unknown",
           slug: "owner-profile",
@@ -144,6 +167,9 @@ describe("send email notification route", () => {
     await sendEmailNotificationHandler(
       {
         method: "POST",
+        headers: {
+          origin: "https://hushhtech.com",
+        },
         body: {
           type: "profile_view",
           slug: "owner-profile",
@@ -164,7 +190,7 @@ describe("send email notification route", () => {
     );
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ success: true, emailSent: true });
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://hushhtech.com");
   });
 
   it("returns a generic 500 error without leaking internal details", async () => {
@@ -174,6 +200,9 @@ describe("send email notification route", () => {
     await sendEmailNotificationHandler(
       {
         method: "POST",
+        headers: {
+          origin: "https://hushhtech.com",
+        },
         body: {
           type: "profile_view",
           slug: "owner-profile",
@@ -186,5 +215,25 @@ describe("send email notification route", () => {
 
     expect(res.statusCode).toBe(500);
     expect(res.body).toEqual({ error: "Failed to send email" });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://hushhtech.com");
+  });
+
+  it("does not echo disallowed origins in CORS headers", async () => {
+    const res = createResponse();
+
+    await sendEmailNotificationHandler(
+      {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://evil.example",
+        },
+        body: {},
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(res.headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
 });
