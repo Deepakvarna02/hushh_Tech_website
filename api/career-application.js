@@ -12,6 +12,7 @@ const REQUIRED_FIELDS = [
 const ALLOWED_COLLEGES = new Set(['LPU', 'MIT']);
 
 const sanitizeString = (value) => (typeof value === 'string' ? value.trim() : '');
+const buildErrorWithCause = (message, cause) => new Error(message, { cause });
 
 const parseRequestBody = (body) => {
   if (!body) {
@@ -21,8 +22,8 @@ const parseRequestBody = (body) => {
   if (typeof body === 'string') {
     try {
       return JSON.parse(body);
-    } catch (error) {
-      throw new Error('Invalid JSON payload');
+    } catch (parseError) {
+      throw buildErrorWithCause('Invalid JSON payload', parseError);
     }
   }
 
@@ -33,7 +34,7 @@ const isValidUrl = (value) => {
   try {
     const parsed = new URL(value);
     return Boolean(parsed.protocol && parsed.host);
-  } catch (error) {
+  } catch {
     return false;
   }
 };
