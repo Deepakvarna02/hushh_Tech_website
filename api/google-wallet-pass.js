@@ -18,7 +18,7 @@ const resolvePayload = (body) => {
   if (!body) return null;
   if (typeof body === "string") {
     try {
-      return JSON.parse(body);
+      return resolvePayload(JSON.parse(body));
     } catch {
       return null;
     }
