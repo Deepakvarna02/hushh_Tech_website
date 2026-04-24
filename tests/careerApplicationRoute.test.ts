@@ -49,7 +49,6 @@ describe("career application route", () => {
   });
 
   it("returns a clear 400 for malformed JSON and preserves the parse cause", async () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = createResponse();
 
     await careerApplicationHandler(
@@ -65,7 +64,7 @@ describe("career application route", () => {
       error: "Invalid request",
       message: "Invalid JSON payload",
     });
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       "Error processing application:",
       expect.objectContaining({
         message: "Invalid JSON payload",
@@ -161,6 +160,7 @@ describe("career application route", () => {
           collegeValue: "MIT",
           jobTitle: "Frontend Intern",
           jobLocation: "Remote",
+          yearsOfExperience: 5,
           submittedAt: "2026-04-24T10:30:00.000Z",
         },
       },
@@ -186,6 +186,7 @@ describe("career application route", () => {
           collegeValue: "MIT",
           jobTitle: "Frontend Intern",
           jobLocation: "Remote",
+          yearsOfExperience: 5,
           submittedAt: "2026-04-24T10:30:00.000Z",
         }),
       })
@@ -197,6 +198,7 @@ describe("career application route", () => {
       data: expect.objectContaining({
         firstName: "Deepak",
         lastName: "Varma",
+        yearsOfExperience: 5,
         appsScript: {
           success: true,
           row: 12,
@@ -233,7 +235,7 @@ describe("career application route", () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toEqual({
       error: "Internal server error",
-      message: "Apps Script is down",
+      message: "An unexpected server error occurred.",
     });
   });
 });
