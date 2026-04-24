@@ -11,8 +11,8 @@ describe("public investor profile API projection", () => {
       slug: "ankit-kumar-singh-2597e6b8",
       name: "Ankit Kumar Singh",
       email: "ankit@hushh.ai",
-      age: null,
-      organisation: null,
+      age: 29,
+      organisation: "Hushh",
       user_confirmed: false,
       investor_profile: {
         primary_goal: {
@@ -32,6 +32,8 @@ describe("public investor profile API projection", () => {
       basic_info: {
         name: "Ankit Kumar Singh",
         email: "a***t@hushh.ai",
+        age: null,
+        organisation: null,
       },
       investor_profile: null,
       onboarding_data: null,

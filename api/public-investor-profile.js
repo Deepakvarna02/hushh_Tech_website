@@ -70,6 +70,7 @@ export const buildPublicInvestorProfilePayload = (
 ) => {
   const privacySettings = profileRow?.privacy_settings || {};
   const isConfirmed = Boolean(profileRow?.user_confirmed);
+  const allowExpandedBasicInfo = isConfirmed;
   const investorProfile =
     isConfirmed && profileRow?.investor_profile && typeof profileRow.investor_profile === "object"
       ? Object.fromEntries(
@@ -133,14 +134,14 @@ export const buildPublicInvestorProfilePayload = (
       email: isPublicProfileFieldVisible(privacySettings, "basic_info", "email")
         ? maskPublicEmail(profileRow.email)
         : null,
-      age: isPublicProfileFieldVisible(privacySettings, "basic_info", "age")
+      age:
+        allowExpandedBasicInfo &&
+        isPublicProfileFieldVisible(privacySettings, "basic_info", "age")
         ? profileRow.age ?? null
         : null,
-      organisation: isPublicProfileFieldVisible(
-        privacySettings,
-        "basic_info",
-        "organisation"
-      )
+      organisation:
+        allowExpandedBasicInfo &&
+        isPublicProfileFieldVisible(privacySettings, "basic_info", "organisation")
         ? profileRow.organisation?.trim() || null
         : null,
     },
